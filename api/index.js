@@ -1,7 +1,6 @@
 /**
  * 【模块功能：狭海的走私长船 (The Smuggler's Ship across the Narrow Sea)】
- * 依托 Vercel Edge Runtime 部署的无服务器代理中转站。
- * 利用 AWS/GCP 的纯洁 IP 绕过针对 Cloudflare 的物理封锁。
+ * 升级版：暴力抓取全路径，完美免疫 URL 特殊字符截断。
  */
 
 export const config = {
@@ -9,28 +8,35 @@ export const config = {
 };
 
 export default async function handler(req) {
-  const url = new URL(req.url);
-  const targetUrl = url.searchParams.get('url');
-
-  if (!targetUrl) {
-    return new Response("【系统架构师警告】缺少目标 URL 参数", { status: 400 });
-  }
-
   try {
-    // 【模块逻辑：伪造信使身份强行叩门】
+    const reqUrl = req.url;
+    // 寻找 url= 的起点
+    const urlIndex = reqUrl.indexOf('url=');
+    
+    if (urlIndex === -1) {
+      return new Response("【狭海驿站】引擎运转正常。正确用法请在结尾加上 ?url=您的机场链接", { status: 200 });
+    }
+    
+    // 【核心修复：暴力截取 url= 后面的所有内容，防止 token 丢失】
+    let targetUrl = reqUrl.substring(urlIndex + 4);
+    
+    // 兼容可能存在的 URL 编码
+    if (targetUrl.startsWith('http%3A') || targetUrl.startsWith('https%3A')) {
+      targetUrl = decodeURIComponent(targetUrl);
+    }
+
     const response = await fetch(targetUrl, {
       headers: {
         "User-Agent": "ClashforWindows/0.20.39",
         "Accept": "*/*"
       }
     });
-    
+
     const data = await response.text();
-    
+
     return new Response(data, {
       status: response.status,
       headers: {
-        // 【人为提示：发放全域通行证】
         "Access-Control-Allow-Origin": "*",
         "Content-Type": response.headers.get("content-type") || "text/plain; charset=utf-8"
       }
